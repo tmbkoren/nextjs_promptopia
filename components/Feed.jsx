@@ -1,55 +1,68 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
 import PromptCard from './PromptCard';
 
 const PromptCardList = ({ data, handleTagClick }) => {
   return (
     <div className='mt-16 prompt_layout'>
       {data.map((post) => (
-        <PromptCard key={post.id} post={post} handleTagClick={handleTagClick} />
+        <PromptCard
+          key={post._id}
+          post={post}
+          handleTagClick={handleTagClick}
+        />
       ))}
     </div>
   );
 };
 
 const Feed = () => {
+  const [allPosts, setAllPosts] = useState([]);
   const [searchText, setSearchText] = useState('');
-  const [posts, setPosts] = useState([]);
-  const [displayPosts, setDisplayPosts] = useState([]);
-  const [searchingPrompts, setSearchingPrompts] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState(null);
+  const [searchedResults, setSearchedResults] = useState([]);
 
-  const handleSearchChange = (e) => {
-    setSearchText(e.target.value);
-    let filteredPosts;
-    if (searchText === ''){
-      filteredPosts = posts
-    } else {
-      filteredPosts = posts.filter((post) => {
-        if (
-          post.creator.username.includes(searchText) ||
-          post.prompt.includes(searchText) ||
-          post.tag.includes(searchText)
-        ) {
-          return post;
-        }
-      });
-    }
+  const fetchPosts = async () => {
+    const response = await fetch('/api/prompt');
+    const data = await response.json();
 
-    setDisplayPosts(filteredPosts);
+    setAllPosts(data);
   };
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      const response = await fetch('/api/prompt');
-      const data = await response.json();
-      console.log(data);
-      setPosts(data);
-      setDisplayPosts(data);
-    };
-
     fetchPosts();
   }, []);
+
+  const filterPrompts = (searchtext) => {
+    const regex = new RegExp(searchtext, 'i'); 
+    return allPosts.filter(
+      (item) =>
+        regex.test(item.creator.username) ||
+        regex.test(item.tag) ||
+        regex.test(item.prompt)
+    );
+  };
+
+  const handleSearchChange = (e) => {
+    clearTimeout(searchTimeout);
+    setSearchText(e.target.value);
+
+    setSearchTimeout(
+      setTimeout(() => {
+        const searchResult = filterPrompts(e.target.value);
+        setSearchedResults(searchResult);
+      }, 500)
+    );
+  };
+
+  const handleTagClick = (tagName) => {
+    setSearchText(tagName);
+
+    const searchResult = filterPrompts(tagName);
+    setSearchedResults(searchResult);
+  };
 
   return (
     <section className='feed'>
@@ -64,7 +77,15 @@ const Feed = () => {
         />
       </form>
 
-      <PromptCardList data={displayPosts} handleTagClick={() => {}} />
+      {/* All Prompts */}
+      {searchText ? (
+        <PromptCardList
+          data={searchedResults}
+          handleTagClick={handleTagClick}
+        />
+      ) : (
+        <PromptCardList data={allPosts} handleTagClick={handleTagClick} />
+      )}
     </section>
   );
 };

@@ -3,7 +3,6 @@ import GoogleProvider from 'next-auth/providers/google';
 import { signIn } from 'next-auth/react';
 import { connectToDB } from '@utils/database';
 import User from '@models/user';
-import { ConnectionPoolClosedEvent } from 'mongodb';
 
 const handler = NextAuth({
   providers: [
